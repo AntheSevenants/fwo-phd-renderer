@@ -77,6 +77,11 @@ class MondothequeReference:
             self.refers_to.content, self.reference.section
         )
 
+        if self.citation_key is not None:
+            self.year = self.citation_key[-4:]
+        else:
+            self.year = None
+
 
 class MondothequeFile:
     """A Mondotheque file"""
