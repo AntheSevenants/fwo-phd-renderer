@@ -41,19 +41,24 @@ def split_all(path: str) -> List[str]:
 class MarkdownFile:
     """Represent a markdown file in the knowledge base."""
 
-    def __init__(self, full_path: str | None, path: str, index: int):
+    def __init__(
+        self, full_path: str | None, path: str, base_path: str | None, index: int
+    ):
         """Initializes a markdown file given its path and index.
 
         Args:
             full_path (str): The absolute system path to the markdown file.
             path (str): The relative path to the markdown file (used for reference matching).
+            base_path (str): Base path of the knowledge base.
             index (int): A unique identifier for the file within the knowledge base.
         """
 
         self.index = index
         self.full_path = full_path
         self.path = path
+        self.base_path = base_path
         self.parts = split_all(self.path)
+        self.category = self.compute_category()
 
         self.is_placeholder: bool = False
 
@@ -90,15 +95,28 @@ class MarkdownFile:
 
         return self.parts[-1]
 
-    @property
-    def category(self) -> str:
-        """Gets the category of the markdown file. This corresponds to a Summarine "course".
+    def compute_category(self) -> str | None:
+        """Computes the category of the markdown file. This corresponds to a Summarine "course".
 
         Returns:
             str: The category of the markdown file.
         """
 
-        return self.parts[0]
+        # Placeholders have no categories
+        if isinstance(self, Placeholder):
+            return None
+
+        if self.base_path is None:
+            return None
+
+        for level in range(len(self.parts) - 1):
+            # Recreate the full directory
+            full_dir = os.path.join(self.base_path, *self.parts[: level + 1])
+
+            if os.path.exists(os.path.join(full_dir, "meta.json")):
+                return self.parts[level]
+
+        return ""
 
     @property
     def outgoing_indices(self) -> Set[int]:
@@ -171,5 +189,5 @@ class Placeholder(MarkdownFile):
             index (int): A unique identifier for the placeholder within the knowledge base.
         """
 
-        super().__init__(None, path, index)
+        super().__init__(None, path, None, index)
         self.is_placeholder = True

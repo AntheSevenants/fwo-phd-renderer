@@ -59,7 +59,9 @@ class KnowledgeBase:
         for index, markdown_file_path in enumerate(markdown_file_paths):
             # Retain only the relative path so matching becomes easier
             relative_path = markdown_file_path.replace(self.base_path, "")
-            markdown_file = MarkdownFile(markdown_file_path, relative_path, index)
+            markdown_file = MarkdownFile(
+                markdown_file_path, relative_path, self.base_path, index
+            )
             self.markdown_files.append(markdown_file)
 
         self.category_filter: str | None = category_filter
