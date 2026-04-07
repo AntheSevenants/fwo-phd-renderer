@@ -9,11 +9,6 @@ if __name__ == "__main__":
         description="FWO PhD renderer - manuscript goes brr!"
     )
     parser.add_argument(
-        "manuscript_path",
-        type=str,
-        help="Path to the manuscript Markdown files",
-    )
-    parser.add_argument(
         "knowledge_base_path",
         type=str,
         help="Path to the knowledge base directory",
@@ -39,11 +34,10 @@ if __name__ == "__main__":
     )
     print("Knowledge base loaded")
 
-    manuscript_files_paths = md.files.get_paths(args.manuscript_path)
     manuscript_files = [
         markdown_file
         for markdown_file in knowledge_base.markdown_files
-        if markdown_file.full_path in manuscript_files_paths
+        if markdown_file.category == "Manuscript"
     ]
     print("Manuscript files filtered")
     print(manuscript_files)
