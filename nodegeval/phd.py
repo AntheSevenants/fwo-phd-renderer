@@ -94,12 +94,19 @@ class MondothequeFile:
         self.knowledge_base = knowledge_base
         self.source_references: List[MondothequeReference] = []
 
+        self.compute_source_references()
+
+        # First, deduplicate by citation_key, keeping the version with page_range if available
+        citation_key_map = {}
+        for ref in self.source_references:
+            # Prefer the version with page_range
+            if ref.citation_key not in citation_key_map or ref.page_range is not None:
+                citation_key_map[ref.citation_key] = ref
+
         # Sort by year
         self.source_references = sorted(
-            self.source_references, key=lambda ref: ref.year
+            citation_key_map.values(), key=lambda ref: ref.year
         )
-
-        self.compute_source_references()
 
     def compute_source_references(self):
         for reference in self.markdown_file.outgoing_neighbours:
