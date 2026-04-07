@@ -109,12 +109,14 @@ class MarkdownFile:
         if self.base_path is None:
             return None
 
-        for level in range(len(self.parts) - 1):
-            # Recreate the full directory
-            full_dir = os.path.join(self.base_path, *self.parts[: level + 1])
+        parts_no = len(self.parts) - 1
+        for level in range(len(self.parts)):
+            reverse_level = parts_no - level
 
+            # Recreate the full directory
+            full_dir = os.path.join(self.base_path, *self.parts[: reverse_level + 1])
             if os.path.exists(os.path.join(full_dir, "meta.json")):
-                return self.parts[level]
+                return self.parts[reverse_level]
 
         return ""
 
