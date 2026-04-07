@@ -15,13 +15,14 @@ def get_mondotheque_entry(reference: OutgoingReference, knowledge_base: Knowledg
     return MondothequeFile(markdown_file, knowledge_base)
 
 
-def find_citation_key(md_content: str) -> str | None:
+def find_citation_key(md_content: str) -> str:
     for line in md_content.split("\n"):
         match = re.search(r"^citation_key:\s*(@[a-z0-9_.-]+)$", line)
         if match:
             citation_key = match.group(1)
             return citation_key
-    return None
+
+    raise ValueError("No citation key found")
 
 
 def find_page_range(md_content: str, section: str) -> str | None:
@@ -72,15 +73,17 @@ class MondothequeReference:
     def __init__(self, reference: OutgoingReference, knowledge_base: KnowledgeBase):
         self.reference = reference
         self.refers_to = knowledge_base.markdown_files[reference.refers_to_index]
-        self.citation_key = find_citation_key(self.refers_to.content)
+
+        try:
+            self.citation_key = find_citation_key(self.refers_to.content)
+        except:
+            raise ValueError(f"Citation key error for {self.refers_to.filename}")
+
         self.page_range = find_page_range(
             self.refers_to.content, self.reference.section
         )
 
-        if self.citation_key is not None:
-            self.year = self.citation_key[-4:]
-        else:
-            self.year = None
+        self.year = int(self.citation_key[-4:])
 
 
 class MondothequeFile:
@@ -90,6 +93,11 @@ class MondothequeFile:
         self.markdown_file = markdown_file
         self.knowledge_base = knowledge_base
         self.source_references: List[MondothequeReference] = []
+
+        # Sort by year
+        self.source_references = sorted(
+            self.source_references, key=lambda ref: ref.year
+        )
 
         self.compute_source_references()
 
