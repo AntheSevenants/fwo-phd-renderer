@@ -14,12 +14,6 @@ if __name__ == "__main__":
         help="Path to the knowledge base directory",
     )
     parser.add_argument(
-        "--tmp_path",
-        type=str,
-        default="tmp/",
-        help="Path where temporary files will be stored",
-    )
-    parser.add_argument(
         "--out_path",
         type=str,
         default="out/",
