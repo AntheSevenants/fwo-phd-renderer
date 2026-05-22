@@ -12,7 +12,7 @@ def get_mondotheque_entry(reference: OutgoingReference, knowledge_base: Knowledg
         reference.refers_to_index
     ]
     # Then create a mondotheque file form this markdown file
-    return MondothequeFile(markdown_file, knowledge_base)
+    return MondothequeFile(markdown_file, reference, knowledge_base)
 
 
 def find_citation_key(md_content: str) -> str:
@@ -87,14 +87,26 @@ class MondothequeReference:
 
 
 class MondothequeFile:
-    """A Mondotheque file"""
+    """A Mondotheque file (or a regular Summarine file for that matter)"""
 
-    def __init__(self, markdown_file: MarkdownFile, knowledge_base: KnowledgeBase):
+    def __init__(
+        self,
+        markdown_file: MarkdownFile,
+        reference: OutgoingReference,
+        knowledge_base: KnowledgeBase,
+    ):
         self.markdown_file = markdown_file
         self.knowledge_base = knowledge_base
         self.source_references: List[MondothequeReference] = []
 
-        self.compute_source_references()
+        self.mondotheque_note = markdown_file.category == "Mondothèque"
+
+        if self.mondotheque_note:
+            self.compute_source_references()
+        else:
+            self.source_references = [
+                MondothequeReference(reference, self.knowledge_base)
+            ]
 
         # First, deduplicate by citation_key, keeping the version with page_range if available
         citation_key_map = {}
