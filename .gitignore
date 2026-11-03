@@ -210,3 +210,5 @@ __marimo__/
 *.sh
 out/
 docker-compose.yml
+tmp/
+kb/
