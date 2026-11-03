@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import os
 import re
 
@@ -118,22 +119,22 @@ class KnowledgeBase:
         (links) to other files. Note that references are not yet resolved!
         """
 
-        for markdown_file in tqdm(
-            self.markdown_files, desc="Finding outgoing references ..."
-        ):
-            relative_path = markdown_file.path
-            if markdown_file.path[0] == "/":
-                relative_path = markdown_file.path[1:]
+        def _process_markdown_file(markdown_file: MarkdownFile):
+            content = markdown_file.content
+            references_text = detect_references(content)
+            markdown_file.outgoing_neighbours = [
+                OutgoingReference.from_text(reference_text)
+                for reference_text in references_text
+            ]
 
-            full_path = os.path.join(self.base_path, f"{relative_path}")
-
-            with open(full_path, "rt") as reader:
-                content = reader.read()
-                references_text = detect_references(content)
-                markdown_file.outgoing_neighbours = [
-                    OutgoingReference.from_text(reference_text)
-                    for reference_text in references_text
-                ]
+        with ThreadPoolExecutor() as executor:
+            list(
+                tqdm(
+                    executor.map(_process_markdown_file, self.markdown_files),
+                    total=len(self.markdown_files),
+                    desc="Finding outgoing references ...",
+                )
+            )
 
     def resolve_outgoing_neighbours(self):
         """Resolves the outgoing references (neighbours) for each markdown file.
