@@ -2,7 +2,8 @@ import os
 import re
 
 from collections import deque
-from typing import List, Set
+from typing import Dict, List, Set
+from tqdm.auto import tqdm
 
 from nodegeval.files import MarkdownFile, Placeholder
 from nodegeval.references import IncomingReference, OutgoingReference
@@ -56,13 +57,25 @@ class KnowledgeBase:
         self.markdown_files: List[MarkdownFile] = []
         markdown_file_paths: List[str] = scrape(self.base_path)
 
-        for index, markdown_file_path in enumerate(markdown_file_paths):
+        # Lookup map: { "relative_path/to/file.md": index }
+        self._suffix_map: Dict[str, int] = {}
+
+        for index, full_path in enumerate(
+            tqdm(markdown_file_paths, desc="Retrieving markdown files ...")
+        ):
             # Retain only the relative path so matching becomes easier
-            relative_path = markdown_file_path.replace(self.base_path, "")
+            relative_path = os.path.relpath(full_path, self.base_path)
+            # Standardise separators to "/" for consistency
+            relative_path = relative_path.replace(os.sep, "/")
+
             markdown_file = MarkdownFile(
-                markdown_file_path, relative_path, self.base_path, index
+                full_path, relative_path, self.base_path, index
             )
             self.markdown_files.append(markdown_file)
+
+            for i in range(len(markdown_file.parts)):
+                suffix = "/".join(markdown_file.parts[i:])
+                self._suffix_map[suffix] = index
 
         self.category_filter: str | None = category_filter
 
@@ -84,19 +97,8 @@ class KnowledgeBase:
 
         reference_filename = text
 
-        for markdown_file in self.markdown_files:
-            match_reference_parts = reference_filename.split("/")
-            match_reference_part_count = len(match_reference_parts)
-            # Cannot match because lengths are not the same
-            if len(markdown_file.parts) < match_reference_part_count:
-                continue
-
-            # Match found!
-            if (
-                markdown_file.parts[-match_reference_part_count:]
-                == match_reference_parts
-            ):
-                return markdown_file.index
+        if text in self._suffix_map:
+            return self._suffix_map.get(text)
         else:
             return None
 
@@ -116,7 +118,9 @@ class KnowledgeBase:
         (links) to other files. Note that references are not yet resolved!
         """
 
-        for markdown_file in self.markdown_files:
+        for markdown_file in tqdm(
+            self.markdown_files, desc="Finding outgoing references ..."
+        ):
             relative_path = markdown_file.path
             if markdown_file.path[0] == "/":
                 relative_path = markdown_file.path[1:]
@@ -138,7 +142,9 @@ class KnowledgeBase:
         to find the corresponding target file in the knowledge base. If the target doesn't exist, a placeholder is created.
         """
 
-        for markdown_file in self.markdown_files:
+        for markdown_file in tqdm(
+            self.markdown_files, desc="Resolving outgoing references ..."
+        ):
             for reference in markdown_file.outgoing_neighbours:
                 reference_filename = reference.filename
 
@@ -170,10 +176,12 @@ class KnowledgeBase:
     def compute_incoming_neighbours(self):
         """Computes incoming references (neighbours) for each markdown file.
 
-        The computation works "inside out" by processing all outgoing references opf files. For each outgoing reference to another file (or placeholder), an incoming reference that points back to the original file is created.
+        The computation works "inside out" by processing all outgoing references of files. For each outgoing reference to another file (or placeholder), an incoming reference that points back to the original file is created.
         """
 
-        for markdown_file in self.markdown_files:
+        for markdown_file in tqdm(
+            self.markdown_files, desc="Looping back incoming references ..."
+        ):
             outgoing_neighbours = markdown_file.outgoing_neighbours
 
             for outgoing_reference in outgoing_neighbours:
